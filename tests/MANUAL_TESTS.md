@@ -51,3 +51,8 @@ Automated Node tests mock Supabase responses and cannot verify migration executi
 3. Open a modal or edit a memo while another account sends. Updates should wait until the dialog/editor closes. Test text composition with an IME.
 4. Hide the tab; background requests should pause. Return or focus it; check immediately for missed messages. Temporarily disconnect and reconnect; the last visible messages should stay and updates should resume automatically.
 5. Send locally while a background GET is in flight. The older response must not remove your message or advance the revision baseline. Concurrent-save conflicts must still be reported rather than overwriting changes.
+
+## Delete approved evidence
+
+1. As owner, delete an approved item from Evidence, confirming or cancelling the dialog. Confirm the approved count updates, other members receive the change automatically and future generated drafts exclude it.
+2. Existing memo versions and original source messages/files must remain intact. Manual edits of historic versions can retain their original references. Collaborators must have no Delete button and cannot delete approved evidence through API requests.

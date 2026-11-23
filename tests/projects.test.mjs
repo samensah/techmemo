@@ -119,3 +119,21 @@ test('direct chats reject extra participants and duplicate membership',()=>{
   assert.throws(()=>mergeProjectData(project,allMembers,bob,data));
  }
 });
+
+test('owner can delete approved evidence while preserving messages and historic memo versions',()=>{
+ const p=structuredClone(project);p.data.evidence[0].status='approved';
+ p.data.versions=[{id:'v1',number:1,reason:'Initial',date:'today',method:'Local template',sections:[{id:'facts',title:'Facts',body:'Original approved fact'}],evidenceIds:['EV1']}];
+ const data=visibleData(p,'alice');data.evidence=[];
+ const merged=mergeProjectData(p,members,alice,data);
+ assert.deepEqual(merged.evidence,[]);assert.deepEqual(merged.versions,p.data.versions);assert.deepEqual(merged.messages,p.data.messages);
+ const memberData=visibleData(p,'bob');memberData.evidence=[];assert.throws(()=>mergeProjectData(p,members,bob,memberData));
+});
+test('new generated drafts cannot reference deleted evidence; manual revisions can preserve historical references',()=>{
+ const p=structuredClone(project);p.data.evidence=[];
+ p.data.versions=[{id:'v1',number:1,reason:'Initial',date:'today',method:'Local template',sections:[{id:'facts',title:'Facts',body:'Historic fact'}],evidenceIds:['deleted-evidence']}];
+ const data=visibleData(p,'alice');
+ const revision={...p.data.versions[0],id:'v2',number:2,reason:'Revision'};
+ data.versions.push(revision);assert.throws(()=>mergeProjectData(p,members,alice,data));
+ revision.method='Human edit';assert.equal(mergeProjectData(p,members,alice,data).versions.length,2);
+ revision.evidenceIds=['invented-id'];assert.throws(()=>mergeProjectData(p,members,alice,data));
+});
