@@ -7,7 +7,7 @@ A responsive, interactive **index.html-first** proof of concept for an Overleaf-
 ## Quickest way to preview
 
 1. Open `index.html` directly in a browser (double-click it). No build or installation required.
-2. Use the public navigation to explore Product, Pricing, Help & Resources, Log in and Sign up. Google sign-in works on Vercel after OAuth configuration (see below); email/password and work SSO remain preview forms. The demo workspace is still browser-local. Choose **Explore the demo** to enter the existing workspace.
+2. Use the public navigation to explore Product, Pricing, Help & Resources, Log in and Sign up. Google sign-in works on Vercel after OAuth configuration (see below); verified email/password accounts work after Supabase configuration (see below); work SSO remains a preview. The demo workspace is still browser-local. Choose **Explore the demo** to enter the existing workspace.
 3. Choose a demo identity via the lower-left profile menu; the sidebar displays only the selected employee's invited workspaces.
 4. In the first workspace, review **General discussion**, **Legal Counsel** (private) and **Finance review** (private group).
 5. Open **Evidence**, approve `EV-002` as the issue owner (Ava), then click **Generate draft**. The memo will use only the approved evidence.
@@ -86,10 +86,10 @@ Import `samensah/techmemo`, select the **main** branch, and keep the repository 
 
 The build copies only `index.html`, `workspace.html` and `assets/`. `.vercelignore` excludes Python API files and model requirements so Vercel does not create Python functions or install Torch/model dependencies. The Google authentication function in `api/auth.js` remains included. The demo works without environment variables; Google sign-in requires the four variables below.
 
-- `/` opens the public homepage; `/#login` and `/#register` open the account previews.
+- `/` opens the public homepage; `/#login` and `/#register` open the account screens.
 - `/workspace.html` opens the interactive workspace. Explicit `.html` links are preserved.
 - Memo drafting uses the browser-local template fallback. `/api/health` returns 404 on this deployment; the workspace handles that by selecting offline template mode. PDF/DOCX/XLSX text extraction and model inference require the optional backend.
-- Google sign-in identifies a visitor using a verified session after configuration. Workspace data stays in each visitor's browser. Deployment does not add persistent user records, shared project storage or invitation enforcement; email/password and enterprise SSO remain previews.
+- Google sign-in identifies a visitor using a verified session after configuration. Workspace data stays in each visitor's browser. Supabase stores email/password user records when configured. Shared project storage and invitation enforcement are still pending; enterprise SSO remains a preview.
 
 To check the exact deployment output locally, run `node scripts/build-static.mjs`, then `python3 -m http.server 8080 --directory dist` and open `http://localhost:8080`.
 
@@ -102,7 +102,7 @@ Vercel references: [project configuration](https://vercel.com/docs/project-confi
 
 ## Configure Google sign-in
 
-Google sign-in uses an OAuth authorization-code flow with PKCE, state and nonce validation. The server verifies Google ID-token signatures, issuer, audience, expiry and verified email, then issues an eight-hour signed `HttpOnly`, `Secure`, `SameSite=Lax` cookie. Google tokens are not saved in browser storage. Logout clears the browser session; it does not log the user out of Google. There is no refresh token or database yet, and individual sessions cannot be revoked server-side before expiry (rotating `AUTH_SECRET` invalidates all sessions).
+Google sign-in uses an OAuth authorization-code flow with PKCE, state and nonce validation. The server verifies Google ID-token signatures, issuer, audience, expiry and verified email, then issues an eight-hour signed `HttpOnly`, `Secure`, `SameSite=Lax` cookie. Google tokens are not saved in browser storage. Logout clears the browser session; it does not log the user out of Google. Google sign-in does not persist a user record or refresh token, and individual sessions cannot be revoked server-side before expiry (rotating `AUTH_SECRET` invalidates all sessions).
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/) and select or create a project named **TechMemo**.
 2. In **Google Auth Platform**, complete **Branding** with TechMemo, your support email and developer contact email. Choose **External** audience for personal and work Google accounts. For testing, add your Google account and any invited testers under **Audience → Test users** if Google shows the testing restriction.
@@ -132,3 +132,37 @@ Google login does **not** implement enterprise SSO or determine project permissi
 Run `npm ci`, `npm test` and `npm run build` for local code verification. OAuth tests use locally signed test tokens and mocked Google token exchange; live Google sign-in must be checked after the credentials are configured.
 
 References: [Google web-server OAuth flow](https://developers.google.com/identity/protocols/oauth2/web-server), [OpenID Connect verification](https://developers.google.com/identity/openid-connect/openid-connect), [Google Auth Platform setup](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid).
+
+
+## Enable full-name / email / password signup
+
+Email accounts are stored in **Supabase Auth**; passwords are hashed and verification emails, single-use tokens and provider rate limits are handled there. No account database table or service-role key is needed in this repository. This setup is independent of the Google OAuth client.
+
+1. Create/select a dedicated TechMemo project in [Supabase](https://supabase.com/dashboard).
+2. In **Authentication → Providers / Sign In**, enable **Email** signup and **Confirm email**. Keep confirmation enabled. Set the minimum password length to **12** or stronger. If confirmation is disabled, the signup endpoint reports a configuration error instead of issuing a session; Supabase may already have provisioned the user, so configure this before testing.
+3. In **Authentication → URL Configuration**, set **Site URL** to `https://techmemo-smoky.vercel.app` (without a trailing slash).
+4. In **Authentication → Email Templates → Confirm signup**, paste [templates/confirm-signup.html](templates/confirm-signup.html). Its link must be:
+
+   ```html
+   <a href="{{ .SiteURL }}/api/auth/verify?token_hash={{ .TokenHash }}">Verify my email address</a>
+   ```
+
+   Do not use `{{ .ConfirmationURL }}` for this implementation. The custom endpoint opens a confirmation page, then verifies through a server POST when the user presses **Confirm email address**. Merely fetching the link does not consume it. The page cookie lasts ten minutes; reopen the original email link if that page expires. Supabase also enforces its configured email-token expiry and prevents reuse.
+5. Configure **custom SMTP** in Supabase for delivery to real users, using your email provider and verified sender. Supabase's default mail service only delivers to project-team addresses and has strict limits; it can be used for initial team testing only. Set reasonable Auth rate limits. All email/password calls are proxied through Vercel, so provider IP-based limits may be shared among visitors; review limits before wider use. No SMTP credentials belong in the frontend or repository.
+6. In **Vercel → Settings → Environment Variables → Production**, add:
+
+   | Variable | Value |
+   | --- | --- |
+   | `SUPABASE_URL` | Your Supabase project URL, e.g. `https://your-project.supabase.co` |
+   | `SUPABASE_PUBLISHABLE_KEY` | Your Supabase **publishable** key (legacy **anon** also works); never a secret/service-role key |
+
+   Keep the existing `AUTH_SECRET` and `APP_URL`. Email accounts do not require Google client credentials. Redeploy **main** after setting the variables.
+7. Register at `https://techmemo-smoky.vercel.app/#register` with your full name, email and a unique password of at least 12 characters (maximum 128 bytes). Confirm that the user appears in **Supabase → Authentication → Users**, initially unconfirmed. Follow the verification email, press **Confirm email address**, and log in with that email and password. The session banner should show your saved full name. Check that login is refused before verification and that sign out clears the session.
+
+`/#resend` requests another verification email if a link expires or is lost. The signup/resend response deliberately avoids revealing whether an address is already registered. Provider delivery errors, weak-password errors and rate limits are surfaced without exposing secrets. No verification email is claimed to be delivered: the UI says it was requested and asks the user to check their inbox.
+
+Successful password login issues the same eight-hour secure HTTP-only app session as Google login. Provider access/refresh tokens are not returned to the browser or persisted by this app. Existing app sessions are not checked against Supabase on each request: deleting/banning a user or changing their password will not revoke an already-issued app cookie before expiry; rotate `AUTH_SECRET` to invalidate all app sessions if necessary. Password reset remains unimplemented. Google and email identities are separate and are not automatically linked, even when they share an email address.
+
+Account creation does not create an organization, server-backed accounting issues or enforce project access. Workspace content and the persona switcher remain fictional browser-local demos. No live email delivery or account persistence can be verified until the Supabase project, SMTP and Vercel variables are configured.
+
+References: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [email templates](https://supabase.com/docs/guides/auth/auth-email-templates), [SMTP setup](https://supabase.com/docs/guides/auth/auth-smtp), [rate limits](https://supabase.com/docs/guides/auth/rate-limits).
