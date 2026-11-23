@@ -40,3 +40,10 @@
 3. Close the menu by clicking outside, tabbing away or pressing Escape. Confirm keyboard focus and the expanded state are correct.
 4. Switch accounting issues, generate a draft and switch demo personas. The signed-in account identity must remain unchanged and the menu must keep working.
 5. Log out from the menu and confirm the session clears. On mobile, confirm the account control sits at the bottom left and its menu stays on screen.
+
+## Sidebar layout
+
+1. On a long memo, scroll the page: TechMemo and the account control must stay at the top and bottom of the viewport respectively.
+2. With enough accounting issues to overflow, scroll the sidebar navigation independently; its header and account footer must remain stationary.
+3. Collapse/expand using the header toggle. Confirm the main page resizes, the account menu still opens, and hidden navigation cannot receive keyboard focus. Toggling must preserve unsent chat text and open memo edits.
+4. Check mobile: initial collapsed rail, expanded sidebar navigation, fixed account footer and an on-screen account popup.
