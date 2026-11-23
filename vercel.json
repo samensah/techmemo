@@ -1,8 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "",
+  "installCommand": "npm ci --ignore-scripts",
   "buildCommand": "node scripts/build-static.mjs",
   "outputDirectory": "dist",
-  "cleanUrls": false
+  "cleanUrls": false,
+  "rewrites": [
+    {
+      "source": "/api/auth/:action",
+      "destination": "/api/auth?action=:action"
+    }
+  ]
 }

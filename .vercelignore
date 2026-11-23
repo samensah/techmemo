@@ -1,7 +1,8 @@
 .git/
 .venv/
 .env*
-api/
+api/**/*.py
+api/requirements.txt
 tests/
 __pycache__/
 node_modules/

@@ -1,0 +1,11 @@
+{
+  "name": "techmemo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-static.mjs",
+    "test": "node --test tests/auth.test.mjs"
+  },
+  "engines": { "node": "22.x" },
+  "dependencies": { "jose": "^6.1.0" }
+}
