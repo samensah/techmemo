@@ -1,0 +1,9 @@
+.git/
+.venv/
+.env*
+api/
+tests/
+__pycache__/
+node_modules/
+dist/
+.static-build-*/

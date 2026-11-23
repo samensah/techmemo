@@ -79,3 +79,22 @@ The app includes **high-level research cues and outbound source links**, not lic
 ### Security note
 
 The backend intentionally accepts anonymous model requests from localhost for demonstration. It trusts approved evidence supplied by the browser, so a malicious client could bypass the approval process. **Never expose this backend to the public internet** or claim it enforces enterprise privacy. Production must enforce workspace/conversation ACLs and evidence approval on the server before sending anything to any model.
+
+## Deploy the proof of concept to Vercel
+
+Import `samensah/techmemo`, select the **main** branch, and keep the repository root as the project root. `vercel.json` selects **Other** (no framework), skips dependency installation, runs `node scripts/build-static.mjs`, and publishes `dist/`. Clear any conflicting dashboard build/output overrides.
+
+The build copies only `index.html`, `workspace.html` and `assets/`. `.vercelignore` excludes the optional Python API so Vercel does not create Python functions or install Torch/model dependencies. No environment variables are required for this static demo.
+
+- `/` opens the public homepage; `/#login` and `/#register` open the account previews.
+- `/workspace.html` opens the interactive workspace. Explicit `.html` links are preserved.
+- Memo drafting uses the browser-local template fallback. `/api/health` returns 404 on this deployment; the workspace handles that by selecting offline template mode. PDF/DOCX/XLSX text extraction and model inference require the optional backend.
+- Authentication remains a preview and workspace data stays in each visitor's browser. Deployment does not add shared persistence or real accounts.
+
+To check the exact deployment output locally, run `node scripts/build-static.mjs`, then `python3 -m http.server 8080 --directory dist` and open `http://localhost:8080`.
+
+### Adding a backend service later
+
+The current deployment is one static frontend; it does not deploy multiple services. Keep the local Python API local until server-side authentication, workspace authorization and evidence validation are implemented. For hosted inference, choose a hosted model endpoint or a separately deployed backend appropriate for model loading and inference. Vercel can proxy `/api/:path*` to that service using a `rewrites` entry once its URL is known. Do not add an API catch-all rewrite to `index.html`, since API requests must return API responses. An external API also needs its own hosting, credentials and access controls; a rewrite only routes traffic.
+
+Vercel references: [project configuration](https://vercel.com/docs/project-configuration/vercel-json), [FastAPI deployment](https://vercel.com/docs/frameworks/backend/fastapi).
