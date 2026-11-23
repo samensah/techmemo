@@ -9,6 +9,18 @@
     {
       "source": "/api/auth/:action",
       "destination": "/api/auth?action=:action"
+    },
+    {
+      "source": "/api/projects/accept",
+      "destination": "/api/projects?action=accept"
+    },
+    {
+      "source": "/api/projects/:id/invites",
+      "destination": "/api/projects?id=:id&action=invite"
+    },
+    {
+      "source": "/api/projects/:id",
+      "destination": "/api/projects?id=:id"
     }
   ]
 }

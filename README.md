@@ -1,170 +1,107 @@
-# TechMemo — collaborative accounting memo prototype
+# TechMemo
 
-A responsive, interactive **index.html-first** proof of concept for an Overleaf-style technical accounting SaaS. The app has organization-scoped accounting issues, invitation-only workspaces, public/private conversations, an explicit **private evidence approval** process, memo drafting and Git-like version comparison.
+A technical accounting workspace for investigating accounting issues, collaborating on evidence, and preparing reviewed memos.
 
-> **Prototype warning:** This is not production software. The app uses demo identities and browser `localStorage`, not real SSO, database isolation or secure authorization. Do not upload confidential or live enterprise data. All example organizations, employees and facts are fictional. GPT-2 is an experimental general-purpose language model and is **not** a reliable accounting expert.
+## Current behavior
 
-## Quickest way to preview
+- Every signed-in account has its own workspace. New accounts start with no projects.
+- Accounting issues are private projects stored in Supabase Postgres. Only the owner and accepted invitees can access a project.
+- Owners invite people by email and receive a link to share. Invitations expire after seven days, require the invited verified email, and are consumed atomically. Creating a link does **not** send an invitation email automatically.
+- Collaborators can discuss, attach evidence, propose excerpts and start permitted private conversations. Only the owner can approve evidence and create/edit memo versions. Other participants can read shared memos and approved excerpts.
+- Server-side membership checks protect every project read/write. Private conversations and pending private evidence are removed from responses to other participants; approved excerpts are explicitly shared.
+- Changes are saved to Supabase. Use **Refresh** to load another collaborator’s latest changes. Revision checks reject conflicting saves rather than overwriting someone else’s work. A conflict stops autosaving: keep any needed text, reload and reapply it.
+- TechMemo and the account menu stay fixed in the sidebar; only navigation scrolls. The sidebar can collapse.
 
-1. Open `index.html` directly in a browser (double-click it). No build or installation required.
-2. Use the public navigation to explore Product, Pricing, Help & Resources, Log in and Sign up. Google sign-in works on Vercel after OAuth configuration (see below); verified email/password accounts work after Supabase configuration (see below); work SSO remains a preview. The demo workspace is still browser-local. Choose **Explore the demo** to enter the existing workspace.
-3. Choose a demo identity via the lower-left profile menu; the sidebar displays only the selected employee's invited workspaces.
-4. In the first workspace, review **General discussion**, **Legal Counsel** (private) and **Finance review** (private group).
-5. Open **Evidence**, approve `EV-002` as the issue owner (Ava), then click **Generate draft**. The memo will use only the approved evidence.
-6. Select **Compare** to see changed sections; use **History** to inspect earlier revisions.
+The old shared Northstar/Harbor organizations, demo identities and seeded accounting issues have been removed. Existing browser demo data is not imported or read. Google and password accounts with the same email are separate identities; they are not automatically linked.
 
-Without the optional backend, the app generates a **local deterministic memo outline**, explicitly labeled as such — it does **not** pretend an LLM ran.
+## Activate project storage (required)
 
-## Run with real small Hugging Face models
+1. In your existing Supabase project, open **SQL Editor → New query**.
+2. Paste and run [supabase/migrations/001_personal_projects.sql](supabase/migrations/001_personal_projects.sql) **once**. It creates project, membership and invitation tables plus atomic create/accept functions. Tables have RLS enabled and no public or authenticated-client access; only the server role can access them. Do not disable RLS or add permissive browser policies.
+3. From **Supabase → Project Settings → API Keys**, obtain a **secret key** (starts `sb_secret_`; legacy `service_role` also works).
+4. In **Vercel → TechMemo → Settings → Environment Variables → Production**, add `SUPABASE_SECRET_KEY`. This is a **server-only** key, distinct from `SUPABASE_PUBLISHABLE_KEY`. Never put it in browser code, chat or Git.
+5. Keep `SUPABASE_URL`, `APP_URL` and `AUTH_SECRET`, then redeploy `main`.
+6. Test with two separate accounts: each should start empty. Account A creates an issue, opens **Members**, enters B’s email and creates an invitation link. Send it to B. B opens it and explicitly accepts while signed in with that email. Both then see that project; their other projects remain private. A third account must not gain access to either the project URL/API or B’s invitation.
 
-Python 3.10+ recommended. From the project root:
+Until the migration and server-only key are installed, the workspace shows a setup error. It does not fall back to shared demo projects or pretend that local storage is secure project isolation.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r api/requirements.txt
-uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
-```
+### Access model
 
-Open **http://127.0.0.1:8000**. The app detects `/api/health` and uses:
+The Node.js project API verifies the app’s signed HTTP-only session and uses that identity for ownership and membership checks. Browser-supplied account IDs, owners and member lists are not trusted. Supabase’s secret key bypasses RLS, so the server API performs authorization itself; the database is closed to direct public/client access. Keep this key server-only. See [Supabase security guidance](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
-- **Generation:** [`gpt2`](https://huggingface.co/openai-community/gpt2) (same GPT-2 model family and weights; `gpt2` checkpoint in Transformers). An experimental continuation is appended in a separately labeled section.
-- **Embeddings / retrieval ranking:** [`sentence-transformers/all-MiniLM-L6-v2`](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2). It ranks **approved** evidence by semantic similarity to the issue.
+The schema supports existing Google account IDs and Supabase email-account IDs without requiring a Google user to have a Supabase Auth record. Display names and email addresses are read from verified sign-in sessions and saved with project memberships.
 
-The first generation downloads model weights to the Hugging Face local cache; internet is required on first run. Inference runs locally on CPU, so initial generation can take time. The app falls back to local template drafting if the server or models are unavailable. The backend extracts text from PDF, DOCX, XLSX, TXT, CSV, MD and JSON files. Binary files are **not** persisted by the prototype; only a clipped text extract and filename are held in browser state. Text is only sent to the model when explicitly approved as memo evidence.
+Private channel content remains private when a participant saves a filtered project snapshot. New messages/files must belong to the current author and an accessible channel; approval and memo-version changes are owner-only. Older versions/messages cannot be silently overwritten. Project data is capped at 2 MB and memo history at 100 versions in this proof of concept.
 
-> GPT-2 is not instruction-tuned and may produce nonsense or false statements. Model output is clearly separated from the memo's draft analysis. Do not use the prototype to make actual accounting decisions.
+Company SSO and domain-restricted corporate invitations are not implemented. Current Google/email accounts can invite any email address. Removing collaborators, revoking invitations, real-time editing, background synchronization and automated invitation emails are not implemented yet.
 
-## Project structure
+## Vercel deployment
 
-```text
-techmemo/
-├── index.html                # Public homepage and account screens
-├── workspace.html            # Existing demo workspace
-├── assets/
-│   ├── public.css            # Public homepage and account screen styling
-│   ├── public.js             # Public navigation and prototype account forms
-│   ├── styles.css            # Responsive UI
-│   └── app.js                # Local demo data, chat, evidence & memo versioning
-├── api/
-│   ├── main.py               # FastAPI + GPT-2 + all-MiniLM-L6-v2 + file text extraction
-│   └── requirements.txt
-├── .gitignore
-└── README.md
-```
+Import `samensah/techmemo`, production branch **main**, repository root. `vercel.json` uses **Other**, runs `npm ci --ignore-scripts`, builds with `node scripts/build-static.mjs`, and publishes `dist/`. Node.js functions in `api/auth.js` and `api/projects.js` handle account and project requests. `.vercelignore` excludes the optional Python API and model dependencies.
 
-## Main working features
+| Environment variable | Purpose |
+| --- | --- |
+| `APP_URL` | `https://techmemo-smoky.vercel.app` (HTTPS origin only) |
+| `AUTH_SECRET` | Private random session-signing secret, at least 32 bytes; generate with `openssl rand -base64 32` |
+| `GOOGLE_CLIENT_ID` | Google OAuth web client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `SUPABASE_URL` | Your project URL, e.g. `https://project-ref.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key or legacy anon key, for email Auth |
+| `SUPABASE_SECRET_KEY` | Server-only Supabase secret key, for project database access |
 
-- Separate fictional organizations and switchable demo identities; issue access is filtered by invitations.
-- Pinned accounting issue summary, invited members, general discussion, 1:1 owner DMs and selected private group chats.
-- Message composition, invite members, create issues/groups/direct messages and upload supporting files.
-- Evidence proposal with an editable **exact excerpt** and owner-only approval. The raw private conversation is never included in the generator input.
-- Approved-evidence-only memo generation, editable memo sections, immutable version snapshots, comparison with previous version, and Markdown download.
-- Optional local Hugging Face inference, semantic retrieval ranking and document text extraction.
-- Responsive layout for desktop/mobile. State is persisted locally using browser `localStorage`.
+Set variables in Vercel and redeploy after changing them. `.env.example` is documentation, not deployed configuration. Do not use Next.js `NEXT_PUBLIC_` prefixes for this project.
 
-## Accounting standards / licensing
+## Google sign-in
 
-The app includes **high-level research cues and outbound source links**, not licensed verbatim standards content or a full IFRS retrieval pipeline. Source links point to IFRS Foundation and IAS Plus research entry points. The app does not fetch, scrape, redistribute or assert authoritative paragraph references from those resources. A future production research service must use a licensed authoritative content feed and source/version auditing.
-
-## Production gaps (not yet implemented)
-
-- Enterprise SSO (e.g. OIDC/Entra ID), real backend identity and authorization, tenant-isolated data store, secure file storage, durable audit log.
-- Server-side evidence ACLs and sharing workflows, redaction and retention policies, confidential-evidence revocation and historic-access handling.
-- Real-time multi-user sync (WebSocket/CRDT) and concurrent edit resolution.
-- Proper primary accounting standards retrieval with licensed content, paragraph-level citation verification, reviewer approval and release workflow.
-- Dependable accounting LLM. Replace GPT-2 with an appropriately evaluated accounting-capable model for real use.
-- Word/PDF export, production observability, rate limits, background processing and security testing.
-
-### Security note
-
-The backend intentionally accepts anonymous model requests from localhost for demonstration. It trusts approved evidence supplied by the browser, so a malicious client could bypass the approval process. **Never expose this backend to the public internet** or claim it enforces enterprise privacy. Production must enforce workspace/conversation ACLs and evidence approval on the server before sending anything to any model.
-
-## Deploy the proof of concept to Vercel
-
-Import `samensah/techmemo`, select the **main** branch, and keep the repository root as the project root. `vercel.json` selects **Other** (no framework), runs `npm ci --ignore-scripts`, builds the static frontend with `node scripts/build-static.mjs`, and publishes `dist/`. A Node.js function serves `/api/auth/*` separately. Clear any conflicting dashboard build/output overrides.
-
-The build copies only `index.html`, `workspace.html` and `assets/`. `.vercelignore` excludes Python API files and model requirements so Vercel does not create Python functions or install Torch/model dependencies. The Google authentication function in `api/auth.js` remains included. The demo works without environment variables; Google sign-in requires the four variables below.
-
-- `/` opens the public homepage; `/#login` and `/#register` open the account screens.
-- `/workspace.html` opens the interactive workspace. Explicit `.html` links are preserved.
-- Memo drafting uses the browser-local template fallback. `/api/health` returns 404 on this deployment; the workspace handles that by selecting offline template mode. PDF/DOCX/XLSX text extraction and model inference require the optional backend.
-- Google sign-in identifies a visitor using a verified session after configuration. Workspace data stays in each visitor's browser. Supabase stores email/password user records when configured. Shared project storage and invitation enforcement are still pending; enterprise SSO remains a preview.
-
-To check the exact deployment output locally, run `node scripts/build-static.mjs`, then `python3 -m http.server 8080 --directory dist` and open `http://localhost:8080`.
-
-### Adding a backend service later
-
-The deployment contains a static frontend and a Node.js authentication function. It does not host Python inference. Keep the local Python API local until server-side authentication, workspace authorization and evidence validation are implemented. For hosted inference, choose a hosted model endpoint or a separately deployed backend appropriate for model loading and inference. Vercel can proxy `/api/:path*` to that service using a `rewrites` entry once its URL is known. Do not add an API catch-all rewrite to `index.html`, since API requests must return API responses. An external API also needs its own hosting, credentials and access controls; a rewrite only routes traffic.
-
-Vercel references: [project configuration](https://vercel.com/docs/project-configuration/vercel-json), [FastAPI deployment](https://vercel.com/docs/frameworks/backend/fastapi).
-
-
-## Configure Google sign-in
-
-Google sign-in uses an OAuth authorization-code flow with PKCE, state and nonce validation. The server verifies Google ID-token signatures, issuer, audience, expiry and verified email, then issues an eight-hour signed `HttpOnly`, `Secure`, `SameSite=Lax` cookie. Google tokens are not saved in browser storage. Logout clears the browser session; it does not log the user out of Google. Google sign-in does not persist a user record or refresh token, and individual sessions cannot be revoked server-side before expiry (rotating `AUTH_SECRET` invalidates all sessions).
-
-1. Open [Google Cloud Console](https://console.cloud.google.com/) and select or create a project named **TechMemo**.
-2. In **Google Auth Platform**, complete **Branding** with TechMemo, your support email and developer contact email. Choose **External** audience for personal and work Google accounts. For testing, add your Google account and any invited testers under **Audience → Test users** if Google shows the testing restriction.
-3. Under **Clients**, create an OAuth client of type **Web application** named **TechMemo Vercel**. Add this exact **Authorized redirect URI**:
+1. Create/select a Google Cloud project and complete **Google Auth Platform → Branding / Audience**. Choose External if supporting personal Google accounts; add test users when required by Google’s testing settings.
+2. Create a **Web application** client. Leave **Use this client for an AI-powered agent** unchecked; this client only signs people in.
+3. Register this exact authorized redirect URI:
 
    ```text
    https://techmemo-smoky.vercel.app/api/auth/callback
    ```
 
-   This server redirect flow does not require a JavaScript origin or the Google browser SDK. Request only `openid`, `email` and `profile` (the code already does this). No Drive/Gmail access is needed.
-4. In **Vercel → TechMemo → Settings → Environment Variables**, add these values for **Production**:
+4. Add the two Google variables from the table above and redeploy. The flow requests only `openid email profile`, uses state/nonce/PKCE, verifies token signatures and claims, and issues a secure HTTP-only app session. Test login, reload and logout.
 
-   | Variable | Value |
-   | --- | --- |
-   | `GOOGLE_CLIENT_ID` | Client ID from Google |
-   | `GOOGLE_CLIENT_SECRET` | Client secret from Google |
-   | `AUTH_SECRET` | A private random value generated with `openssl rand -base64 32` |
-   | `APP_URL` | `https://techmemo-smoky.vercel.app` |
+Reference: [Google web-server OAuth](https://developers.google.com/identity/protocols/oauth2/web-server).
 
-   Never put real secrets in source files or chat. `.env.example` lists names and placeholders only. `AUTH_SECRET` must be at least 32 bytes; keep it stable between deployments.
-5. Redeploy the latest **main** commit. Open `https://techmemo-smoky.vercel.app/#login`, select **Log in with Google**, approve sign-in, and confirm your email appears above the demo workspace. **Sign up with Google** uses the same first-time/returning-user flow; no persistent user record is created yet. Check **Sign out**, then reload to confirm the session is cleared.
+## Email/password signup and verification
 
-Use the canonical production domain for sign-in. Preview URLs, custom domains and localhost need their own matching Google redirect registration and environment configuration; this setup intentionally fixes the callback to `APP_URL`. Plain static servers and opening `index.html` as a file cannot execute the authentication function. You can still explore the demo that way.
+1. In Supabase **Authentication → Sign In / Providers**, enable signups and the **Email** provider. Keep **Confirm email ON** and require passwords of at least 12 characters.
+2. Set **Authentication → URL Configuration → Site URL** to `https://techmemo-smoky.vercel.app` without a trailing slash.
+3. Keep the default confirmation email. Supabase verifies the address and redirects to TechMemo; the app removes returned provider tokens from the URL and asks for password login. No email-template editing is required.
+4. Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in Vercel, keeping `APP_URL` and `AUTH_SECRET`, then redeploy.
+5. Register with full name, email and a password (12 characters minimum, 128 bytes maximum). Confirm the email, then log in. Signup does not issue an app session. Unverified accounts cannot log in. `/#resend` requests a fresh confirmation email.
 
-Google login does **not** implement enterprise SSO or determine project permissions. A work Google account is only a verified identity here. Company domain restrictions, personal-account cross-domain invitations, account provisioning and tenant authorization must be implemented with persistent server-side project membership. The accessible demo and persona switcher remain explicitly fictional.
+Supabase’s built-in email delivery only supports project-team addresses with strict limits. Configure **custom SMTP** in Supabase for other users. Provider rate limits apply; calls proxied through Vercel may share the server’s IP-based limits. See [SMTP setup](https://supabase.com/docs/guides/auth/auth-smtp) and [rate limits](https://supabase.com/docs/guides/auth/rate-limits).
 
-Run `npm ci`, `npm test` and `npm run build` for local code verification. OAuth tests use locally signed test tokens and mocked Google token exchange; live Google sign-in must be checked after the credentials are configured.
+Optional: when template editing is available, [templates/confirm-signup.html](templates/confirm-signup.html) links to the custom confirmation page, which consumes the email token only after an explicit confirmation POST. Default templates remain supported.
 
-References: [Google web-server OAuth flow](https://developers.google.com/identity/protocols/oauth2/web-server), [OpenID Connect verification](https://developers.google.com/identity/openid-connect/openid-connect), [Google Auth Platform setup](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid).
+Email accounts are stored and hashed by Supabase Auth. Password reset and account linking are not implemented. App sessions last eight hours and are not individually revocable: deleting/banning a user or changing a password does not invalidate an existing app cookie before expiry. Rotate `AUTH_SECRET` to invalidate all sessions when needed.
 
+## Memo generation and attachments
 
-## Enable full-name / email / password signup
+Without a model service, memos use a deterministic outline from approved evidence; the UI labels this as a local template. Research links are starting points, not authoritative retrieved paragraph citations. Professionals must validate guidance and approve conclusions.
 
-Email accounts are stored in **Supabase Auth**; passwords are hashed and verification emails, single-use tokens and provider rate limits are handled there. No account database table or service-role key is needed in this repository. This setup is independent of the Google OAuth client.
+Projects store clipped extracted text, filenames and metadata, not uploaded binary files. PDF/DOCX/XLSX extraction requires the optional Python backend. An encrypted binary object-storage workflow, stronger accounting models and authoritative licensed research retrieval remain future work.
 
-1. Create/select a dedicated TechMemo project in [Supabase](https://supabase.com/dashboard).
-2. In **Authentication → Providers / Sign In**, enable **Email** signup and **Confirm email**. Keep confirmation enabled. Set the minimum password length to **12** or stronger. If confirmation is disabled, the signup endpoint reports a configuration error instead of issuing a session; Supabase may already have provisioned the user, so configure this before testing.
-3. In **Authentication → URL Configuration**, set **Site URL** to `https://techmemo-smoky.vercel.app` (without a trailing slash).
-4. Keep Supabase’s **default Confirm signup email template**. It verifies the address at Supabase and redirects back to your Site URL. TechMemo removes any returned provider tokens from the URL, shows the login screen and requires your password before creating an app session. No template editing is required.
+### Optional local Python model server
 
-   **Optional custom template (when editing is available):** In **Authentication → Email Templates → Confirm signup**, paste [templates/confirm-signup.html](templates/confirm-signup.html). Its link is:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r api/requirements.txt
+uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
+```
 
-   ```html
-   <a href="{{ .SiteURL }}/api/auth/verify?token_hash={{ .TokenHash }}">Verify my email address</a>
-   ```
+This experimental backend uses Hugging Face `gpt2` and `sentence-transformers/all-MiniLM-L6-v2`. It is not configured for the hosted project/auth APIs and accepts anonymous local requests: **do not expose it publicly**. GPT-2 is not a reliable accounting expert. Authentication and persistent workspace testing should use the Vercel deployment and its Node.js functions.
 
-   The default template’s `{{ .ConfirmationURL }}` is supported. If you choose the optional custom template above, the custom endpoint opens a confirmation page, then verifies through a server POST when the user presses **Confirm email address**. Merely fetching the link does not consume it. The page cookie lasts ten minutes; reopen the original email link if that page expires. Supabase also enforces its configured email-token expiry and prevents reuse.
-5. Configure **custom SMTP** in Supabase for delivery to real users, using your email provider and verified sender. Supabase's default mail service only delivers to project-team addresses and has strict limits; it can be used for initial team testing only. Set reasonable Auth rate limits. All email/password calls are proxied through Vercel, so provider IP-based limits may be shared among visitors; review limits before wider use. No SMTP credentials belong in the frontend or repository.
-6. In **Vercel → Settings → Environment Variables → Production**, add:
+## Development and verification
 
-   | Variable | Value |
-   | --- | --- |
-   | `SUPABASE_URL` | Your Supabase project URL, e.g. `https://your-project.supabase.co` |
-   | `SUPABASE_PUBLISHABLE_KEY` | Your Supabase **publishable** key (legacy **anon** also works); never a secret/service-role key |
+```bash
+npm ci
+npm test
+npm run build
+```
 
-   Keep the existing `AUTH_SECRET` and `APP_URL`. Email accounts do not require Google client credentials. Redeploy **main** after setting the variables.
-7. Register at `https://techmemo-smoky.vercel.app/#register` with your full name, email and a unique password of at least 12 characters (maximum 128 bytes). Confirm that the user appears in **Supabase → Authentication → Users**, initially unconfirmed. Follow the default verification email and log in (the optional custom template also requires pressing **Confirm email address** on TechMemo’s confirmation page) with that email and password. The session banner should show your saved full name. Check that login is refused before verification and that sign out clears the session.
-
-`/#resend` requests another verification email if a link expires or is lost. The signup/resend response deliberately avoids revealing whether an address is already registered. Provider delivery errors, weak-password errors and rate limits are surfaced without exposing secrets. No verification email is claimed to be delivered: the UI says it was requested and asks the user to check their inbox.
-
-Successful password login issues the same eight-hour secure HTTP-only app session as Google login. Provider access/refresh tokens are not returned to the browser or persisted by this app. Existing app sessions are not checked against Supabase on each request: deleting/banning a user or changing their password will not revoke an already-issued app cookie before expiry; rotate `AUTH_SECRET` to invalidate all app sessions if necessary. Password reset remains unimplemented. Google and email identities are separate and are not automatically linked, even when they share an email address.
-
-Account creation does not create an organization, server-backed accounting issues or enforce project access. Workspace content and the persona switcher remain fictional browser-local demos. No live email delivery or account persistence can be verified until the Supabase project, SMTP and Vercel variables are configured.
-
-References: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [email templates](https://supabase.com/docs/guides/auth/auth-email-templates), [SMTP setup](https://supabase.com/docs/guides/auth/auth-smtp), [rate limits](https://supabase.com/docs/guides/auth/rate-limits).
+Tests use mocked database requests and locally signed auth tokens. They do not substitute for applying the SQL migration and testing live accounts. See [tests/MANUAL_TESTS.md](tests/MANUAL_TESTS.md). A static file server can preview public pages, but cannot run account/project functions. The workspace requires sign-in and a configured database.

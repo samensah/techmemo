@@ -1,4 +1,4 @@
-/* Server account controls remain separate from fictional workspace personas. */
+/* Account controls use the verified server session. */
 (async () => {
   if (location.protocol === 'file:') return;
   const workspace = location.pathname.endsWith('/workspace.html');
@@ -8,7 +8,7 @@
     if (!response.ok) return;
     session = await response.json();
   } catch { return; }
-  if (!session.user && !workspace) return;
+  if (!session.user) return;
 
   async function logout(button, status) {
     button.disabled = true;
@@ -45,7 +45,7 @@
       dialog.className = 'account-dialog';
       dialog.setAttribute('aria-labelledby', 'account-dialog-title');
       dialog.innerHTML = `<h2 id="account-dialog-title">${profile ? 'Profile' : 'Settings'}</h2><dl></dl>${profile ? '' : '<p>Your account session lasts up to eight hours. Password changes and other account settings are not available yet.</p>'}<form method="dialog"><button>Close</button></form>`;
-      const fields = profile ? [['Name', user.name], ['Email address', user.email], ['Sign-in method', user.provider === 'google' ? 'Google' : 'Email and password']] : [['Account', user.email], ['Workspace storage', 'This browser · Demo data']];
+      const fields = profile ? [['Name', user.name], ['Email address', user.email], ['Sign-in method', user.provider === 'google' ? 'Google' : 'Email and password']] : [['Account', user.email], ['Workspace storage', 'Private projects and invited collaborations']];
       const list = dialog.querySelector('dl');
       for (const [name, value] of fields) { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = name; dd.textContent = value || 'Not provided'; list.append(dt, dd); }
       dialog.addEventListener('close', () => { dialog.remove(); trigger.focus(); });
@@ -58,7 +58,7 @@
     return;
   }
 
-  // The public site and unsigned demo retain their existing account status controls.
+  // Public pages retain their account status controls.
   const bar = document.createElement('div');
   bar.className = 'account-bar';
   bar.setAttribute('aria-label', 'Account session');

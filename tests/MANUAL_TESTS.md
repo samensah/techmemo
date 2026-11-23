@@ -1,49 +1,36 @@
-# UI acceptance checklist
+# Acceptance checks
 
-1. Open `index.html` directly. Confirm the public homepage appears first. Check Product, Pricing, Help & Resources, Log in and Sign up navigation, including the mobile menu.
-   - Check email validation, full name, required fields, 12-character signup password minimum, password visibility and resend-verification navigation. Signup and login submit to the authentication function. Reset password and work SSO remain previews. Google buttons must navigate to `/api/auth/start`; without configuration they show a setup message.
-   - Choose **Explore the demo**. The workspace must work in **Offline template mode** without model dependencies. Repeat via the optional FastAPI server to verify `/workspace.html` is served.
-2. Open the **Legal Counsel** private chat, send a message, and choose **Propose as evidence**. Confirm that it is **pending**, not used automatically.
-3. As Ava (workspace owner), approve the exact excerpt in **Evidence**. Regenerate the memo. The new version should include the approved fact and retain the previous version.
-4. Open **Compare** and confirm changed memo sections are identified. Use **History** to inspect the older version.
-5. Switch persona to Priya. Confirm the Legal Counsel conversation is invisible, and unapproved legal evidence is absent. Priya should not have an **Approve** button.
-6. Switch to Olivia (another organization). Confirm that Northstar's workspace is hidden.
-7. Create an issue, invite an employee from the same organization, start a private group and upload a text attachment.
-8. Run the optional model server. The UI should show **Hugging Face backend**, and generated versions should include a separate, clearly labeled **GPT-2 experimental continuation** section.
-9. Confirm that all model requests send **only** evidence whose status is `approved` in the demo state (inspect the browser network request). This is client-side only; a production server must enforce the rule independently.
+## Accounts
 
+1. Configure Google OAuth and/or Supabase email Auth, Vercel variables, the project migration and server secret using the README.
+2. Check signup validation, email verification/resend, unverified-login rejection, Google login and logout. Confirm no tokens/passwords in localStorage or UI. Verify HTTP-only secure cookies.
+3. Check default email redirects remove provider tokens from the URL. With the optional custom template, confirmation GET must not consume the token; POST must be required.
 
-## Google sign-in on Vercel
+## Personal workspace and project sharing
 
-1. Configure Google OAuth and Production environment variables using the README; redeploy. Confirm Python dependencies are not installed and `/api/auth/session` returns JSON with `Cache-Control: no-store`.
-2. On both login and signup, use the Google button. Confirm Google shows TechMemo and only identity permissions, then returns to `/workspace.html`. Confirm the bottom-left account menu shows your Google identity separately from fictional demo personas.
-3. Reload; the session should persist. Sign out and reload; it should show demo mode. The public demo remains accessible intentionally.
-4. Cancel Google sign-in; confirm a clear error and retry path. Visit `/api/auth/callback` with missing/invalid state; no session should be created.
-5. Inspect cookies: session must be `HttpOnly`, `Secure`, `SameSite=Lax`, with no access/refresh/ID tokens in localStorage. No token/code/secret should be rendered in the UI.
-6. Test unconfigured deployment and expired/invalid session: no false signed-in state. Company-domain project restrictions are not part of this change.
+1. Sign in as A. Confirm an empty workspace, actual account initials/name, no Northstar/Harbor or identity switcher, and a logo matching the public site. Create an issue and reload: it must persist.
+2. Sign in as B in a separate browser/profile. Confirm no A projects or shared demo data. Check a third account C similarly. Direct API requests with another account's project ID must return 404, including writes and invites.
+3. As A, create an invitation for B's email in **Members**. Copy/send the link. B must explicitly accept while signed in with that email. B now sees that project; A's other projects remain private. A must Refresh to see B's membership.
+4. C cannot accept B's invitation, even with the link. Expired or already-used invitations must not grant C access. A signed-out invitee should be sent to login and retain the invitation in the same browser tab.
+5. B can send messages and propose evidence. A sees them after Refresh. Only A can invite people, approve evidence or save memo versions.
+6. Add a third project member. Create a private conversation excluding that member. Inspect their project API response: no private conversation, messages, files or pending excerpts may appear. Approving an excerpt shares that excerpt only. Saving a filtered snapshot must preserve others' private data.
+7. Test simultaneous edits in two browsers. The second stale save must show a conflict and not overwrite the first. Preserve any needed text and reload before reapplying it.
+8. Remove database configuration in a preview deployment: show a setup error, never shared seeded projects or local-storage isolation disguised as secure sharing.
 
+## Sidebar and account menu
 
-## Email/password accounts
+1. Scroll a long memo and an overflowing project list independently. TechMemo and the account control stay at the top and bottom of the viewport.
+2. Collapse/expand the sidebar. The main view resizes; unsent chat text and memo edits remain. Hidden navigation must not receive keyboard focus.
+3. Open the account menu: full name/email, Profile, Settings, Help, Upgrade Plan and Log out. Close with outside click, keyboard focus or Escape. Verify menu stability after project rerenders.
+4. Check mobile's initially collapsed rail, expanded navigation, fixed account footer and on-screen account popup.
 
-1. Configure Supabase Auth, confirm-email setting, the default confirmation template (or optional custom template), email delivery and Production variables using the README; redeploy.
-2. Register with a full name and email. Confirm the password is sent only in the POST body and no session is issued. Confirm a persistent unverified user record in Supabase. Try logging in before verification: it must be refused.
-3. Open the default email link. Confirm it returns to the login screen with provider tokens removed from the address bar; no app session should be created until password login. With the optional custom template, loading the confirmation page must not consume the token; press **Confirm email address**, then log in. Confirm the saved full name and email in the bottom-left account menu, and session persistence on reload.
-4. Log out; sign in again with the correct password. Incorrect passwords must fail. Google login must still work independently.
-5. Test a reused or expired link and the resend route; request a fresh link after provider cooldown. Duplicate signup should not reveal whether the address already exists. Check delivery failures, malformed fields and rate-limited responses.
-6. Confirm no provider access/refresh tokens or passwords are placed in localStorage, response JSON, HTML, or account cookies. Supabase is the account store; accounting issue data remains browser-local.
+## Evidence and memos
 
+1. Propose a selected private message/file excerpt; confirm it is pending and excluded from generation.
+2. Owner approves the excerpt and generates a memo. Review source IDs, then add evidence and generate again. Compare and history preserve earlier snapshots.
+3. Members cannot forge another author, modify previous messages/versions, approve evidence or access private channels through custom API requests.
+4. Check attachments store metadata and extracted text only, with clear messaging when binary text extraction is unavailable. Validate Markdown export.
 
-## Workspace account menu
+# Verification limits
 
-1. Sign in. Confirm there is no signed-in top banner in the workspace; the sidebar footer shows two initials and the account holder's first name.
-2. Open the account menu. Confirm full name and email, Profile, Settings, Help, Upgrade Plan and Log out. Verify Profile/Settings dialogs close correctly, Help opens resources and Upgrade Plan opens pricing.
-3. Close the menu by clicking outside, tabbing away or pressing Escape. Confirm keyboard focus and the expanded state are correct.
-4. Switch accounting issues, generate a draft and switch demo personas. The signed-in account identity must remain unchanged and the menu must keep working.
-5. Log out from the menu and confirm the session clears. On mobile, confirm the account control sits at the bottom left and its menu stays on screen.
-
-## Sidebar layout
-
-1. On a long memo, scroll the page: TechMemo and the account control must stay at the top and bottom of the viewport respectively.
-2. With enough accounting issues to overflow, scroll the sidebar navigation independently; its header and account footer must remain stationary.
-3. Collapse/expand using the header toggle. Confirm the main page resizes, the account menu still opens, and hidden navigation cannot receive keyboard focus. Toggling must preserve unsent chat text and open memo edits.
-4. Check mobile: initial collapsed rail, expanded sidebar navigation, fixed account footer and an on-screen account popup.
+Automated Node tests mock Supabase responses and cannot verify migration execution, real database permissions, live invitation acceptance or SMTP delivery. Run these multi-account checks after deployment. Realtime editing, invitation-email delivery, corporate SSO/domain rules, collaborator removal and secure binary uploads remain unimplemented.
