@@ -11,7 +11,8 @@ function screen(route, reply = { ok: true, message: 'Check your email.' }) {
   const form = { dataset: { mode: route }, querySelector: s => s === '[type="submit"]' ? button : password, reset() { resets++; } };
   const document = { title: '', querySelector: s => s === '#main' ? main : s === '#auth-status' ? status : { classList: { remove() {} }, setAttribute() {}, addEventListener() {} }, querySelectorAll: () => [] };
   const location = { hash: `#${route}`, search: '', protocol: 'https:', assign(url) { redirect = url; } };
-  vm.runInNewContext(source, { document, location, window: { scrollTo() {}, addEventListener() {} }, URLSearchParams, AbortSignal,
+  const history = { replaceState(_state, _title, url) { const updated = new URL(url, 'https://techmemo-smoky.vercel.app'); location.hash = updated.hash; location.search = updated.search; } };
+  vm.runInNewContext(source, { document, location, history, window: { scrollTo() {}, addEventListener() {} }, URLSearchParams, AbortSignal,
     FormData: class { get(key) { return values.get(key); } },
     fetch: async (url, options) => { sent = { url, options }; return { ok: reply.ok, json: async () => reply }; }
   });
@@ -45,4 +46,19 @@ test('resend route only requests an email address', async () => {
   await page.submit();
   assert.equal(page.sent().url, '/api/auth/resend');
   assert.deepEqual(JSON.parse(page.sent().options.body), { email: 'ava@example.com' });
+});
+
+test('default Supabase email return discards tokens and shows login without creating a session', () => {
+  const page = screen('access_token=sensitive-token&refresh_token=sensitive-refresh&type=signup');
+  assert.match(page.main.innerHTML, /Welcome back/);
+  assert.match(page.status.textContent, /confirmation link has been processed/);
+  assert(!page.main.innerHTML.includes('sensitive-token'));
+  assert.equal(page.sent(), undefined);
+  assert.equal(page.redirect(), undefined);
+});
+test('expired default confirmation links show a safe resend message', () => {
+  const page = screen('error=access_denied&error_code=otp_expired&error_description=sensitive-error');
+  assert.match(page.main.innerHTML, /Welcome back/);
+  assert.match(page.status.textContent, /invalid or has expired/);
+  assert(!page.status.textContent.includes('sensitive-error'));
 });

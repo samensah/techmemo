@@ -141,13 +141,15 @@ Email accounts are stored in **Supabase Auth**; passwords are hashed and verific
 1. Create/select a dedicated TechMemo project in [Supabase](https://supabase.com/dashboard).
 2. In **Authentication → Providers / Sign In**, enable **Email** signup and **Confirm email**. Keep confirmation enabled. Set the minimum password length to **12** or stronger. If confirmation is disabled, the signup endpoint reports a configuration error instead of issuing a session; Supabase may already have provisioned the user, so configure this before testing.
 3. In **Authentication → URL Configuration**, set **Site URL** to `https://techmemo-smoky.vercel.app` (without a trailing slash).
-4. In **Authentication → Email Templates → Confirm signup**, paste [templates/confirm-signup.html](templates/confirm-signup.html). Its link must be:
+4. Keep Supabase’s **default Confirm signup email template**. It verifies the address at Supabase and redirects back to your Site URL. TechMemo removes any returned provider tokens from the URL, shows the login screen and requires your password before creating an app session. No template editing is required.
+
+   **Optional custom template (when editing is available):** In **Authentication → Email Templates → Confirm signup**, paste [templates/confirm-signup.html](templates/confirm-signup.html). Its link is:
 
    ```html
    <a href="{{ .SiteURL }}/api/auth/verify?token_hash={{ .TokenHash }}">Verify my email address</a>
    ```
 
-   Do not use `{{ .ConfirmationURL }}` for this implementation. The custom endpoint opens a confirmation page, then verifies through a server POST when the user presses **Confirm email address**. Merely fetching the link does not consume it. The page cookie lasts ten minutes; reopen the original email link if that page expires. Supabase also enforces its configured email-token expiry and prevents reuse.
+   The default template’s `{{ .ConfirmationURL }}` is supported. If you choose the optional custom template above, the custom endpoint opens a confirmation page, then verifies through a server POST when the user presses **Confirm email address**. Merely fetching the link does not consume it. The page cookie lasts ten minutes; reopen the original email link if that page expires. Supabase also enforces its configured email-token expiry and prevents reuse.
 5. Configure **custom SMTP** in Supabase for delivery to real users, using your email provider and verified sender. Supabase's default mail service only delivers to project-team addresses and has strict limits; it can be used for initial team testing only. Set reasonable Auth rate limits. All email/password calls are proxied through Vercel, so provider IP-based limits may be shared among visitors; review limits before wider use. No SMTP credentials belong in the frontend or repository.
 6. In **Vercel → Settings → Environment Variables → Production**, add:
 
@@ -157,7 +159,7 @@ Email accounts are stored in **Supabase Auth**; passwords are hashed and verific
    | `SUPABASE_PUBLISHABLE_KEY` | Your Supabase **publishable** key (legacy **anon** also works); never a secret/service-role key |
 
    Keep the existing `AUTH_SECRET` and `APP_URL`. Email accounts do not require Google client credentials. Redeploy **main** after setting the variables.
-7. Register at `https://techmemo-smoky.vercel.app/#register` with your full name, email and a unique password of at least 12 characters (maximum 128 bytes). Confirm that the user appears in **Supabase → Authentication → Users**, initially unconfirmed. Follow the verification email, press **Confirm email address**, and log in with that email and password. The session banner should show your saved full name. Check that login is refused before verification and that sign out clears the session.
+7. Register at `https://techmemo-smoky.vercel.app/#register` with your full name, email and a unique password of at least 12 characters (maximum 128 bytes). Confirm that the user appears in **Supabase → Authentication → Users**, initially unconfirmed. Follow the default verification email and log in (the optional custom template also requires pressing **Confirm email address** on TechMemo’s confirmation page) with that email and password. The session banner should show your saved full name. Check that login is refused before verification and that sign out clears the session.
 
 `/#resend` requests another verification email if a link expires or is lost. The signup/resend response deliberately avoids revealing whether an address is already registered. Provider delivery errors, weak-password errors and rate limits are surfaced without exposing secrets. No verification email is claimed to be delivered: the UI says it was requested and asks the user to check their inbox.
 
