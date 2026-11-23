@@ -18,3 +18,7 @@ body:has(.app-shell){overflow:hidden}.app-shell{height:100vh;height:100dvh;min-h
 @media(max-width:1080px){.right-panel{position:fixed;top:0;bottom:0}}
 @media(max-width:670px){.project-header{padding:16px 15px 0}.project-content{padding:0 15px 25px}.project-header .section-toolbar{margin-top:14px}.project-header .overview-row .action-row{margin-top:10px}.project-header .issue-card{margin-top:14px}.project-header .tabbar{gap:12px}.project-header .tab{font-size:11px}.chat-directory{max-height:25dvh}}
 @media(max-height:700px){.project-header{padding-top:12px}.project-header .page-subtitle{display:none}.project-header .page-title{font-size:23px}.project-header .issue-card{padding:12px;margin-top:10px}.project-header .issue-copy{-webkit-line-clamp:2;margin-block:6px}.project-header .section-toolbar{margin-top:12px}.project-header .tab{padding-bottom:10px}}
+.memo-toolbar-region{flex:none;padding:18px 34px 0}.memo-toolbar-region .doc-bar{background:#fff;border:1px solid var(--border);border-radius:13px 13px 0 0}.memo-content>.document-wrap{margin-top:0;border-top:0;border-radius:0 0 13px 13px}.memo-toolbar-region .doc-bar>div:first-child{min-width:0}.memo-toolbar-region .doc-name{flex-wrap:wrap}.memo-toolbar-region .doc-tools{flex-shrink:0}
+@media(max-width:1280px){.memo-toolbar-region{padding:18px 22px 0}}
+@media(max-width:800px){.memo-toolbar-region .doc-bar{flex-wrap:wrap}.memo-toolbar-region .doc-tools{flex-wrap:wrap}}
+@media(max-width:670px){.memo-toolbar-region{padding:12px 15px 0}}

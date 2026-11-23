@@ -69,3 +69,5 @@ Automated Node tests mock Supabase responses and cannot verify migration executi
 2. Scroll message history. Conversations header, chat list, current-chat header and compose box stay stationary. Many people/groups may scroll within their bounded directory without moving the message composer.
 3. Switch Evidence/Activity and verify the same independent scroll region. Receive an incoming chat update while reading halfway down a memo; its scroll position must be preserved.
 4. Check desktop, collapsed sidebar, mobile chat overlay and a short viewport. Ensure the compose box and tab content remain reachable without outer-page scrolling.
+
+Memo toolbar: scroll a long memo and confirm its title, version/author/date information, and History/Compare/Edit/Export controls stay fixed directly below the project tabs. Only the memo body and comparison content should move. Check narrow screens for wrapped controls.
