@@ -62,3 +62,10 @@ Automated Node tests mock Supabase responses and cannot verify migration executi
 1. Open a direct or group chat, select its delete icon, and confirm. It disappears from your chat list after reload as well; other participants retain their history and approved evidence remains intact.
 2. Check another participant’s deletion does not remove your own conversation. Everyone must have no delete action.
 3. Use New chat to select a person or reopen a deleted group. The conversation and previous messages should be available again.
+
+## Independent pane scrolling
+
+1. Open a project with a long memo and long chat history. Only content below Memo editor / Evidence / Activity should scroll in the middle; the project header, issue summary and tabs stay in place.
+2. Scroll message history. Conversations header, chat list, current-chat header and compose box stay stationary. Many people/groups may scroll within their bounded directory without moving the message composer.
+3. Switch Evidence/Activity and verify the same independent scroll region. Receive an incoming chat update while reading halfway down a memo; its scroll position must be preserved.
+4. Check desktop, collapsed sidebar, mobile chat overlay and a short viewport. Ensure the compose box and tab content remain reachable without outer-page scrolling.
