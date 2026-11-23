@@ -89,3 +89,33 @@ test('mutations require canonical origin and malformed project writes are reject
  assert.equal((await req(alice,{method:'POST',body:{}})).status,400);
  const data=visibleData(project,'alice');data.messages[0].text='overwrite';assert.throws(()=>mergeProjectData(project,members,alice,data));
 });
+
+test('members can create direct and group chats without adding the owner',()=>{
+ const allMembers=[...members,{project_id:id,user_id:'charlie',name:'Charlie',email:charlie.email}];
+ for(const kind of ['direct','group']){
+  const data=visibleData(project,'bob');data.conversations.push({id:'c3',workspace:id,kind,name:'Review',members:['bob','charlie']});
+  data.messages.push({id:'m3',channel:'c3',author:'bob',text:'Private review'});
+  const merged=mergeProjectData(project,allMembers,bob,data);
+  assert.equal(visibleData({...project,data:merged},'alice').conversations.some(c=>c.id==='c3'),false);
+  assert.equal(visibleData({...project,data:merged},'charlie').messages.some(m=>m.id==='m3'),true);
+ }
+});
+test('proposed private excerpts reach owner for review without revealing the source conversation',()=>{
+ const privateProject=structuredClone(project);
+ privateProject.data.conversations.push({id:'c3',workspace:id,kind:'direct',name:'Review',members:['bob','charlie']});
+ privateProject.data.messages.push({id:'m3',channel:'c3',author:'bob',text:'Full private message'});
+ privateProject.data.evidence.push({id:'EV3',workspace:id,kind:'message',source:'m3',channel:'c3',proposedBy:'bob',status:'pending',name:'Selected fact',content:'Selected excerpt'});
+ const view=visibleData(privateProject,'alice');
+ assert(view.evidence.some(e=>e.id==='EV3'));
+ assert(!view.messages.some(m=>m.id==='m3'));assert(!view.conversations.some(c=>c.id==='c3'));
+ const selected=view.evidence.find(e=>e.id==='EV3');Object.assign(selected,{status:'approved',approvedBy:'alice',approvedAt:'2026-11-23'});
+ const merged=mergeProjectData(privateProject,members,alice,view);
+ assert.equal(merged.evidence.find(e=>e.id==='EV3').status,'approved');assert(merged.messages.some(m=>m.id==='m3'));
+});
+test('direct chats reject extra participants and duplicate membership',()=>{
+ const allMembers=[...members,{project_id:id,user_id:'charlie',email:charlie.email,name:'Charlie'}];
+ for(const participants of [['bob','alice','charlie'],['bob','bob']]){
+  const data=visibleData(project,'bob');data.conversations.push({id:'c3',workspace:id,kind:'direct',name:'Invalid',members:participants});
+  assert.throws(()=>mergeProjectData(project,allMembers,bob,data));
+ }
+});

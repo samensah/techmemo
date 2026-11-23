@@ -13,7 +13,7 @@
 3. As A, create an invitation for B's email in **Members**. Copy/send the link. B must explicitly accept while signed in with that email. B now sees that project; A's other projects remain private. A must reload to see B's membership.
 4. C cannot accept B's invitation, even with the link. Expired or already-used invitations must not grant C access. A signed-out invitee should be sent to login and retain the invitation in the same browser tab.
 5. B can send messages and propose evidence. A sees them after reloading. Only A can invite people, approve evidence or save memo versions.
-6. Add a third project member. Create a private conversation excluding that member. Inspect their project API response: no private conversation, messages, files or pending excerpts may appear. Approving an excerpt shares that excerpt only. Saving a filtered snapshot must preserve others' private data.
+6. Add a third project member. Create a private conversation excluding that member. Inspect their project API response: no private conversation, messages or files may appear. Pending excerpts are visible to their participants and the owner reviewing the explicitly submitted excerpt. Approving an excerpt shares that excerpt only. Saving a filtered snapshot must preserve others' private data.
 7. Test simultaneous edits in two browsers. The second stale save must show a conflict and not overwrite the first. Preserve any needed text and reload before reapplying it.
 8. Remove database configuration in a preview deployment: show a setup error, never shared seeded projects or local-storage isolation disguised as secure sharing.
 
@@ -34,3 +34,11 @@
 # Verification limits
 
 Automated Node tests mock Supabase responses and cannot verify migration execution, real database permissions, live invitation acceptance or SMTP delivery. Run these multi-account checks after deployment. Realtime editing, invitation-email delivery, corporate SSO/domain rules, collaborator removal and secure binary uploads remain unimplemented.
+
+
+## Conversations
+
+1. Check the conversation list shows project members by name, named groups and Everyone. Clicking a member opens or reuses a direct chat.
+2. As a non-owner, start a direct chat with another non-owner. Confirm only those two accounts can see it.
+3. Create a named group by selecting project members. Confirm the creator is included and the owner is included only when selected. Check the group member list.
+4. Propose a selected private excerpt as evidence. Confirm the owner can review/approve that excerpt without seeing the raw private chat. Existing chats keep their existing membership.
