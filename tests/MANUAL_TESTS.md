@@ -16,7 +16,7 @@
 ## Google sign-in on Vercel
 
 1. Configure Google OAuth and Production environment variables using the README; redeploy. Confirm Python dependencies are not installed and `/api/auth/session` returns JSON with `Cache-Control: no-store`.
-2. On both login and signup, use the Google button. Confirm Google shows TechMemo and only identity permissions, then returns to `/workspace.html`. Confirm the banner shows your Google identity separately from fictional demo personas.
+2. On both login and signup, use the Google button. Confirm Google shows TechMemo and only identity permissions, then returns to `/workspace.html`. Confirm the bottom-left account menu shows your Google identity separately from fictional demo personas.
 3. Reload; the session should persist. Sign out and reload; it should show demo mode. The public demo remains accessible intentionally.
 4. Cancel Google sign-in; confirm a clear error and retry path. Visit `/api/auth/callback` with missing/invalid state; no session should be created.
 5. Inspect cookies: session must be `HttpOnly`, `Secure`, `SameSite=Lax`, with no access/refresh/ID tokens in localStorage. No token/code/secret should be rendered in the UI.
@@ -27,7 +27,16 @@
 
 1. Configure Supabase Auth, confirm-email setting, the default confirmation template (or optional custom template), email delivery and Production variables using the README; redeploy.
 2. Register with a full name and email. Confirm the password is sent only in the POST body and no session is issued. Confirm a persistent unverified user record in Supabase. Try logging in before verification: it must be refused.
-3. Open the default email link. Confirm it returns to the login screen with provider tokens removed from the address bar; no app session should be created until password login. With the optional custom template, loading the confirmation page must not consume the token; press **Confirm email address**, then log in. Confirm the saved full name and email in the account banner, and session persistence on reload.
+3. Open the default email link. Confirm it returns to the login screen with provider tokens removed from the address bar; no app session should be created until password login. With the optional custom template, loading the confirmation page must not consume the token; press **Confirm email address**, then log in. Confirm the saved full name and email in the bottom-left account menu, and session persistence on reload.
 4. Log out; sign in again with the correct password. Incorrect passwords must fail. Google login must still work independently.
 5. Test a reused or expired link and the resend route; request a fresh link after provider cooldown. Duplicate signup should not reveal whether the address already exists. Check delivery failures, malformed fields and rate-limited responses.
 6. Confirm no provider access/refresh tokens or passwords are placed in localStorage, response JSON, HTML, or account cookies. Supabase is the account store; accounting issue data remains browser-local.
+
+
+## Workspace account menu
+
+1. Sign in. Confirm there is no signed-in top banner in the workspace; the sidebar footer shows two initials and the account holder's first name.
+2. Open the account menu. Confirm full name and email, Profile, Settings, Help, Upgrade Plan and Log out. Verify Profile/Settings dialogs close correctly, Help opens resources and Upgrade Plan opens pricing.
+3. Close the menu by clicking outside, tabbing away or pressing Escape. Confirm keyboard focus and the expanded state are correct.
+4. Switch accounting issues, generate a draft and switch demo personas. The signed-in account identity must remain unchanged and the menu must keep working.
+5. Log out from the menu and confirm the session clears. On mobile, confirm the account control sits at the bottom left and its menu stays on screen.
