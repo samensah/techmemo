@@ -170,3 +170,8 @@ app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
 @app.get("/")
 def index():
     return FileResponse(ROOT / "index.html")
+
+
+@app.get("/workspace.html")
+def demo_workspace():
+    return FileResponse(ROOT / "workspace.html")

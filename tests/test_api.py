@@ -20,6 +20,11 @@ class APIHealthTest(unittest.TestCase):
         self.assertEqual(result.status_code, 200)
         self.assertIn('<title>TechMemo', result.text)
 
+    def test_demo_workspace_remains_accessible(self):
+        result = self.client.get('/workspace.html')
+        self.assertEqual(result.status_code, 200)
+        self.assertIn('assets/app.js', result.text)
+
     def test_text_extraction(self):
         result = self.client.post('/api/extract', files={'file': ('example.txt', b'Example contract clause', 'text/plain')})
         self.assertEqual(result.status_code, 200)

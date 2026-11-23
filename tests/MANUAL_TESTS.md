@@ -1,6 +1,8 @@
 # UI acceptance checklist
 
-1. Open `index.html` directly. The interface must work in **Offline template mode** without model dependencies.
+1. Open `index.html` directly. Confirm the public homepage appears first. Check Product, Pricing, Help & Resources, Log in and Sign up navigation, including the mobile menu.
+   - Check login/signup Google buttons, email validation, required fields, signup password minimum length, password visibility, reset password and work SSO. Confirm these show setup messages without claiming successful authentication or saving/sending credentials.
+   - Choose **Explore the demo**. The workspace must work in **Offline template mode** without model dependencies. Repeat via the optional FastAPI server to verify `/workspace.html` is served.
 2. Open the **Legal Counsel** private chat, send a message, and choose **Propose as evidence**. Confirm that it is **pending**, not used automatically.
 3. As Ava (workspace owner), approve the exact excerpt in **Evidence**. Regenerate the memo. The new version should include the approved fact and retain the previous version.
 4. Open **Compare** and confirm changed memo sections are identified. Use **History** to inspect the older version.

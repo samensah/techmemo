@@ -7,10 +7,11 @@ A responsive, interactive **index.html-first** proof of concept for an Overleaf-
 ## Quickest way to preview
 
 1. Open `index.html` directly in a browser (double-click it). No build or installation required.
-2. Choose a demo identity via the lower-left profile menu; the sidebar displays only the selected employee's invited workspaces.
-3. In the first workspace, review **General discussion**, **Legal Counsel** (private) and **Finance review** (private group).
-4. Open **Evidence**, approve `EV-002` as the issue owner (Ava), then click **Generate draft**. The memo will use only the approved evidence.
-5. Select **Compare** to see changed sections; use **History** to inspect earlier revisions.
+2. Use the public navigation to explore Product, Pricing, Help & Resources, Log in and Sign up. Account forms preview Google, email/password and work SSO; authentication is not connected, and credentials are never saved or sent. Choose **Explore the demo** to enter the existing workspace.
+3. Choose a demo identity via the lower-left profile menu; the sidebar displays only the selected employee's invited workspaces.
+4. In the first workspace, review **General discussion**, **Legal Counsel** (private) and **Finance review** (private group).
+5. Open **Evidence**, approve `EV-002` as the issue owner (Ava), then click **Generate draft**. The memo will use only the approved evidence.
+6. Select **Compare** to see changed sections; use **History** to inspect earlier revisions.
 
 Without the optional backend, the app generates a **local deterministic memo outline**, explicitly labeled as such — it does **not** pretend an LLM ran.
 
@@ -38,8 +39,11 @@ The first generation downloads model weights to the Hugging Face local cache; in
 
 ```text
 techmemo/
-├── index.html                # Browser entry point
+├── index.html                # Public homepage and account screens
+├── workspace.html            # Existing demo workspace
 ├── assets/
+│   ├── public.css            # Public homepage and account screen styling
+│   ├── public.js             # Public navigation and prototype account forms
 │   ├── styles.css            # Responsive UI
 │   └── app.js                # Local demo data, chat, evidence & memo versioning
 ├── api/
