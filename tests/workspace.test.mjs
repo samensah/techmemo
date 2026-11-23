@@ -38,4 +38,8 @@ test('member-name chat opens a direct conversation without inserting the project
  await page.click('create-direct','bob');
  const direct=page.saved.at(-1).data.conversations.find(c=>c.kind==='direct');
  assert.deepEqual(Array.from(direct.members),['alice','bob']);
+ assert.match(page.app.innerHTML,/aria-label="Delete chat"/);
+ await page.click('delete-chat',direct.id);assert.match(page.app.innerHTML,/Other participants keep their conversation history/);
+ await page.click('confirm-delete-chat');assert.deepEqual(Array.from(page.saved.at(-1).data.hiddenChats),[direct.id]);
+ await page.click('create-direct','bob');assert.deepEqual(Array.from(page.saved.at(-1).data.hiddenChats),[]);
 });

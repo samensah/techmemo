@@ -137,3 +137,22 @@ test('new generated drafts cannot reference deleted evidence; manual revisions c
  revision.method='Human edit';assert.equal(mergeProjectData(p,members,alice,data).versions.length,2);
  revision.evidenceIds=['invented-id'];assert.throws(()=>mergeProjectData(p,members,alice,data));
 });
+
+test('chat deletion preferences are private to each participant and retain history/evidence',()=>{
+ const p=structuredClone(project);p.data.conversations[1].members=['alice','bob'];
+ const data=visibleData(p,'alice');data.hiddenChats=['c2'];
+ const merged=mergeProjectData(p,members,alice,data);
+ assert.deepEqual(visibleData({...p,data:merged},'alice').hiddenChats,['c2']);
+ assert.deepEqual(visibleData({...p,data:merged},'bob').hiddenChats,[]);
+ assert.equal(visibleData({...p,data:merged},'bob').hiddenChatsByUser,undefined);
+ assert.deepEqual(merged.messages,p.data.messages);assert.deepEqual(merged.evidence,p.data.evidence);
+ const other=visibleData({...p,data:merged},'bob');other.hiddenChats=['c2'];
+ const both=mergeProjectData({...p,data:merged},members,bob,other);
+ assert.deepEqual(both.hiddenChatsByUser.alice,['c2']);assert.deepEqual(both.hiddenChatsByUser.bob,['c2']);
+});
+test('chat deletion rejects Everyone and inaccessible conversations',()=>{
+ for(const hiddenChats of [['c1'],['c2'],['unknown']]){
+  const data=visibleData(project,'bob');data.hiddenChats=hiddenChats;
+  assert.throws(()=>mergeProjectData(project,members,bob,data));
+ }
+});

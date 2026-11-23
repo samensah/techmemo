@@ -56,3 +56,9 @@ Automated Node tests mock Supabase responses and cannot verify migration executi
 
 1. As owner, delete an approved item from Evidence, confirming or cancelling the dialog. Confirm the approved count updates, other members receive the change automatically and future generated drafts exclude it.
 2. Existing memo versions and original source messages/files must remain intact. Manual edits of historic versions can retain their original references. Collaborators must have no Delete button and cannot delete approved evidence through API requests.
+
+## Delete chats
+
+1. Open a direct or group chat, select its delete icon, and confirm. It disappears from your chat list after reload as well; other participants retain their history and approved evidence remains intact.
+2. Check another participant’s deletion does not remove your own conversation. Everyone must have no delete action.
+3. Use New chat to select a person or reopen a deleted group. The conversation and previous messages should be available again.
