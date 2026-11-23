@@ -36,14 +36,16 @@
       cloud.save(w.id,{conversations:state.conversations.filter(c=>c.workspace===w.id),messages:state.messages.filter(m=>state.conversations.some(c=>c.id===m.channel&&c.workspace===w.id)),evidence:state.evidence.filter(e=>e.workspace===w.id),files:state.files.filter(f=>f.workspace===w.id),versions:state.versions[w.id]||[],activities:state.activities.filter(a=>a.workspace===w.id),seq:state.seq});
     }
   }
-  async function loadProjects(selected = state.workspace){
-    const projects=await cloud.load();
+  async function loadProjects(selected = state.workspace, options = {}){
+    const projects=await cloud.load(options);
+    if(!projects)return false;
     state.workspaces=projects.map(p=>({id:p.id,name:p.name,code:`ISSUE-${p.id.slice(0,8).toUpperCase()}`,standard:p.standard,status:'In progress',owner:p.owner_id,date:p.period,description:p.description,members:p.members.map(m=>m.user_id),created:p.created_at}));
     users=[account,...projects.flatMap(p=>p.members.map(m=>({id:m.user_id,name:m.name,email:m.email,role:p.owner_id===m.user_id?'Project owner':'Collaborator',color:'green'})))].filter((u,i,all)=>all.findIndex(x=>x.id===u.id)===i);
     state.conversations=projects.flatMap(p=>p.data.conversations);state.messages=projects.flatMap(p=>p.data.messages);state.evidence=projects.flatMap(p=>p.data.evidence);state.files=projects.flatMap(p=>p.data.files);state.activities=projects.flatMap(p=>p.data.activities);state.versions=Object.fromEntries(projects.map(p=>[p.id,p.data.versions]));state.seq=Math.max(0,...projects.map(p=>p.data.seq));
     state.workspace=state.workspaces.some(w=>w.id===selected)?selected:null;
     if(!state.workspace)state.view='dashboard';
     if(!channels().some(c=>c.id===state.channel))state.channel=state.conversations.find(c=>c.workspace===state.workspace&&c.kind==='general')?.id||null;
+    return true;
   }
   let toastTimer;
   function toast(t){const el=$('#toast');if(!el)return;el.textContent=t;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3300)}
@@ -96,7 +98,7 @@
     if(m.type==='upload'){return `${head('Upload supporting evidence')}<div class="modal-body"><p class="disclaimer">Upload a file to the current conversation. Private attachments remain restricted to conversation members and require approval before use in a memo.</p><div class="form-field"><label>File</label><input type="file" id="upload-file" accept=".txt,.md,.csv,.json,.pdf,.docx,.xlsx,.xls"/></div><div class="field-help">Text files can be read directly; with the optional Python server, PDF, DOCX and XLSX text extraction is available. The project stores extracted text and file metadata; secure binary file storage is not available yet.</div></div>${foot('confirm-upload','Attach file')}`}
     return '';
   }
-  function render(){const app=$('#app');app.innerHTML=`<div class="app-shell ${ui.sidebarCollapsed?'sidebar-collapsed':''}">${renderSidebar()}<main class="main">${topbar()}${renderMain()}</main>${renderChat()}</div>${renderModal()}<input id="hidden-attach" type="file" accept=".txt,.md,.csv,.json,.pdf,.docx,.xlsx,.xls" hidden>`;if(state.view==='workspace'){const box=$('#messages');if(box)box.scrollTop=box.scrollHeight}window.dispatchEvent(new Event('techmemo:workspace-render'))}
+  function render({background=false}={}){const input=background?$('#message-input'):null;const draft=input?{text:input.value,focused:document.activeElement===input,start:input.selectionStart,end:input.selectionEnd}:null;const previousMessages=background?$('#messages'):null;const scroll=previousMessages?{top:previousMessages.scrollTop,bottom:previousMessages.scrollHeight-previousMessages.scrollTop-previousMessages.clientHeight<60}:null;const app=$('#app');app.innerHTML=`<div class="app-shell ${ui.sidebarCollapsed?'sidebar-collapsed':''}">${renderSidebar()}<main class="main">${topbar()}${renderMain()}</main>${renderChat()}</div>${renderModal()}<input id="hidden-attach" type="file" accept=".txt,.md,.csv,.json,.pdf,.docx,.xlsx,.xls" hidden>`;if(state.view==='workspace'){const box=$('#messages');if(box)box.scrollTop=scroll&&!scroll.bottom?scroll.top:box.scrollHeight}if(draft){const next=$('#message-input');if(next){next.value=draft.text;if(draft.focused){next.focus({preventScroll:true});next.setSelectionRange(draft.start,draft.end)}}}window.dispatchEvent(new Event('techmemo:workspace-render'))}
   function addActivity(text,type='history'){state.activities.push({workspace:state.workspace,type,text,when:today()})}
   function makeEvidence({kind,source,channel:ch,name,content}){const id=`EV-${crypto.randomUUID()}`;state.evidence.push({id,workspace:state.workspace,kind,source,channel:ch,name,content,status:'pending',proposedBy:state.user});addActivity(`${user().name} proposed evidence ${id}`,'chat');persist();ui.modal=null;state.tab='evidence';render();toast('Evidence proposal submitted. Owner approval required.')}
   function draftSections(w,items,experimental=''){const st=STANDARDS[w.standard]||STANDARDS['IFRS 15'];const body=items.length?items.map(e=>`[${e.id}] ${e.content||'[Attachment text not extracted]'}`).join('\n\n'):'No evidence has been approved yet.';return [
@@ -113,7 +115,7 @@
   function saveEdit(){if(!owner()){toast('Only the project owner can edit the memo.');return;}const v=selectedVersion();if(!v)return;const updated=v.sections.map(s=>({...s,body:document.querySelector(`textarea[data-section="${s.id}"]`)?.value||''}));if(updated.every((s,i)=>s.body===v.sections[i].body)){ui.edit=false;render();toast('No changes made.');return}const vs=state.versions[state.workspace];vs.push({id:`v-${crypto.randomUUID()}`,number:vs.length+1,reason:`Edited by ${user().name}`,date:new Date().toLocaleString(),method:'Human edit',sections:updated,evidenceIds:[...v.evidenceIds]});ui.edit=false;ui.selectedHistory=null;ui.compare=true;addActivity(`${user().name} saved human edit as version ${vs.length}`);persist();render();toast('Edits saved as a new version')}
   function exportMemo(){const v=selectedVersion();if(!v)return;const w=workspace(),s=STANDARDS[w.standard]||STANDARDS['IFRS 15'];let txt=`# Technical accounting memorandum\n\nIssue: ${w.name} (${w.code})\nFramework: ${w.standard}\nReporting period: ${w.date}\nVersion: ${v.number}\nMethod: ${v.method}\n\n`;v.sections.forEach((sec,i)=>{txt+=`## ${i+1}. ${sec.title}\n\n${sec.body}\n\n`});txt+=`## Sources\n\nApproved evidence: ${v.evidenceIds.join(', ')}\n\nStandards research starting point: ${s.url}\nSecondary resource: ${s.secondary}\n\nUnverified draft for professional review.\n`;const blob=new Blob([txt],{type:'text/markdown;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`${w.code}-memo-v${v.number}.md`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);ui.modal=null;render();toast('Markdown memo downloaded')}
   function apiUrl(path){return location.protocol==='file:'?`http://127.0.0.1:8000${path}`:path}
-  async function checkBackend(){try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),1800);const resp=await fetch(apiUrl('/api/health'),{signal:controller.signal});clearTimeout(timer);const data=await resp.json();ui.api=!!data.ok;ui.modelReady=!!data.models_loaded}catch{ui.api=false}render()}
+  async function checkBackend(){try{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),1800);const resp=await fetch(apiUrl('/api/health'),{signal:controller.signal});clearTimeout(timer);const data=await resp.json();ui.api=!!data.ok;ui.modelReady=!!data.models_loaded}catch{ui.api=false}}
   async function attachFile(input){const file=input?.files?.[0];if(!file)return;if(file.size>12*1024*1024){toast('Demo attachment limit: 12 MB');return}let extracted='';const plain=/\.(txt|md|csv|json)$/i.test(file.name);try{if(plain){extracted=(await file.text()).slice(0,16000)}else if(ui.api){const form=new FormData();form.append('file',file);const r=await fetch(apiUrl('/api/extract'),{method:'POST',body:form});if(r.ok){const d=await r.json();extracted=(d.text||'').slice(0,16000)}else toast('File attached, but text extraction failed.')}else{toast('File added as metadata. Run Python backend to extract PDF/DOCX/XLSX text.')}}catch{toast('File attached without extracted text.')}const ch=channel(),id=`f-${crypto.randomUUID()}`;state.files.push({id,workspace:state.workspace,channel:ch?.id||null,name:file.name,size:file.size,addedBy:state.user,extracted,uploaded:today()});if(ch){state.messages.push({id:`m-${crypto.randomUUID()}`,channel:ch.id,author:state.user,text:`Uploaded ${file.name}. The file requires explicit approval before its contents can be used by the memo.`,file:file.name,time:now(),date:today()})}addActivity(`${user().name} attached ${file.name}`);persist();render();toast('Attachment added. Propose it from the Evidence tab to request approval.')}
   function addChannel(kind,name,members){const ch={id:`c-${crypto.randomUUID()}`,workspace:state.workspace,kind,name,members};state.conversations.push(ch);state.channel=ch.id;ui.modal=null;persist();render();toast('Private conversation created')}
   async function clickAction(action,id){switch(action){
@@ -158,6 +160,28 @@
   document.addEventListener('change',e=>{if(e.target.id==='hidden-attach')attachFile(e.target)});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ui.modal){ui.modal=null;render()}if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&document.activeElement?.id==='message-input'){e.preventDefault();$('#send-form')?.requestSubmit()}});
   window.addEventListener('techmemo:save-error',e=>toast(e.detail));
+  function startUpdates(){
+    let timer=null,running=false,disconnected=false;
+    const safe=()=>document.visibilityState!=='hidden'&&!ui.edit&&!ui.modal&&!ui.busy&&!ui.composing&&!document.querySelector('.account-trigger[aria-expanded="true"]');
+    async function update(){
+      if(running)return;
+      clearTimeout(timer);running=true;
+      try{
+        if(safe()){
+          const selected=state.workspace;
+          const changed=await loadProjects(selected,{background:true,canApply:()=>safe()&&state.workspace===selected});
+          if(changed)render({background:true});
+          if(disconnected){disconnected=false;toast('Connection restored. Conversations are updating again.')}
+        }
+      }catch(err){if(!disconnected){disconnected=true;toast(err.status===401?'Your session expired. Log in again to receive updates.':'Could not receive updates. Retrying automatically.')}}
+      finally{running=false;timer=setTimeout(update,3000)}
+    }
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='hidden')update()});
+    window.addEventListener('focus',update);
+    document.addEventListener('compositionstart',()=>{ui.composing=true});
+    document.addEventListener('compositionend',()=>{ui.composing=false});
+    timer=setTimeout(update,3000);
+  }
   async function boot(){
     const app=$('#app');app.innerHTML='<div class="workspace-loading">Loading your workspace…</div>';
     try{
@@ -169,7 +193,7 @@
         const accept=confirm(`Accept this project invitation as ${account.email}?`);
         if(accept){try{const result=await cloud.accept(invite);state.workspace=result.projectId;state.view='workspace';sessionStorage.removeItem('techmemo:pending-invite');history.replaceState(null,'','/workspace.html')}catch(err){toast(err.message)}}
       }
-      await loadProjects();render();checkBackend();
+      await loadProjects();render();checkBackend();startUpdates();
     }catch(err){app.innerHTML=`<div class="workspace-loading"><h1>Your workspace</h1><p>${esc(err.message||'Could not load your workspace.')}</p><button class="btn primary" onclick="location.reload()">Try again</button> <a href="index.html">Back to home</a></div>`;}
   }
   boot();

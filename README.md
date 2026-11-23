@@ -9,7 +9,7 @@ A technical accounting workspace for investigating accounting issues, collaborat
 - Owners invite people by email and receive a link to share. Invitations expire after seven days, require the invited verified email, and are consumed atomically. Creating a link does **not** send an invitation email automatically.
 - Collaborators can discuss, attach evidence, propose excerpts and start permitted private conversations. Only the owner can approve evidence and create/edit memo versions. Other participants can read shared memos and approved excerpts.
 - Server-side membership checks protect every project read/write. Private conversations are visible only to selected participants. A proposed excerpt is explicitly sent to the project owner for review; approval shares only that excerpt with the project.
-- Changes are saved to Supabase. Reload the page to load another collaborator’s latest changes. Revision checks reject conflicting saves rather than overwriting someone else’s work. A conflict stops autosaving: keep any needed text, reload and reapply it.
+- Changes are saved to Supabase. Visible pages check for remote changes approximately every three seconds. Updates preserve unsent chat text, focus, cursor position and message scroll position. Sync pauses during memo editing, dialogs, local saves and text composition; hidden tabs pause requests. Returning to the tab checks immediately. Revision checks reject conflicting saves rather than overwriting someone else’s work. A conflict stops autosaving: keep any needed text, reload and reapply it.
 - TechMemo and the account menu stay fixed in the sidebar; only navigation scrolls. The sidebar can collapse.
 
 The old shared Northstar/Harbor organizations, demo identities and seeded accounting issues have been removed. Existing browser demo data is not imported or read. Google and password accounts with the same email are separate identities; they are not automatically linked.
@@ -33,7 +33,7 @@ The schema supports existing Google account IDs and Supabase email-account IDs w
 
 Private channel content remains private when a participant saves a filtered project snapshot. New messages/files must belong to the current author and an accessible channel; approval and memo-version changes are owner-only. Older versions/messages cannot be silently overwritten. Chat lists show project members by name and named group chats. Anyone can start a direct chat with another project member or create a group with selected members; the owner is not automatically included. Existing chats retain their current participants. Project data is capped at 2 MB and memo history at 100 versions in this proof of concept.
 
-Company SSO and domain-restricted corporate invitations are not implemented. Current Google/email accounts can invite any email address. Removing collaborators, revoking invitations, real-time editing, background synchronization and automated invitation emails are not implemented yet.
+Company SSO and domain-restricted corporate invitations are not implemented. Current Google/email accounts can invite any email address. Removing collaborators, revoking invitations, WebSocket-based realtime editing and automated invitation emails are not implemented yet.
 
 ## Vercel deployment
 

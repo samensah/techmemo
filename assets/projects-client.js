@@ -1,8 +1,8 @@
 /* Project data is fetched with HTTP-only app sessions; no identity or project is taken from localStorage. */
 (() => {
   const signature = value => JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a],[b])=>a.localeCompare(b))) : item);
-  const revisions = new Map(), baselines = new Map(), pending = new Map();
-  let saving = null, failure = null;
+  const revisions = new Map(), baselines = new Map(), memberships = new Map(), pending = new Map();
+  let saving = null, failure = null, generation = 0;
   async function request(path, options = {}) {
     const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...options,
       headers: { 'Content-Type': 'application/json', ...options.headers }, signal: AbortSignal.timeout(20000) });
@@ -26,6 +26,7 @@
   function save(id, data) {
     if (failure) { status('Not saved · reload required'); return; }
     if (signature(data) === baselines.get(id) && !pending.has(id)) return;
+    generation++;
     pending.set(id, structuredClone(data));
     if (!saving) {
       saving = drain().catch(() => {}).finally(() => { saving = null; });
@@ -35,10 +36,16 @@
   window.TechMemoProjects = {
     request, save, flush,
     get status() { return failure ? 'Not saved · reload required' : saving ? 'Saving…' : 'Saved'; },
-    async load() {
+    async load({ background = false, canApply = () => true } = {}) {
+      if (background && (saving || failure)) return null;
       await flush();
+      const started = generation;
       const result = await request('/api/projects');
-      for (const p of result.projects) { revisions.set(p.id, p.revision); baselines.set(p.id, signature(p.data)); }
+      // A send/edit made during the fetch must never be replaced by an older response.
+      if (started !== generation || saving || !canApply()) return background ? null : this.load();
+      if (background && result.projects.length === revisions.size && result.projects.every(p => revisions.get(p.id) === p.revision && memberships.get(p.id) === signature(p.members))) return null;
+      for (const id of revisions.keys()) if (!result.projects.some(p => p.id === id)) { revisions.delete(id); baselines.delete(id); memberships.delete(id); }
+      for (const p of result.projects) { revisions.set(p.id, p.revision); memberships.set(p.id, signature(p.members)); baselines.set(p.id, signature(p.data)); }
       return result.projects;
     },
     async create(fields) { await flush(); return request('/api/projects', { method: 'POST', body: JSON.stringify(fields) }); },

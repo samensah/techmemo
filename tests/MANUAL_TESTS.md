@@ -10,9 +10,9 @@
 
 1. Sign in as A. Confirm an empty workspace, actual account initials/name, no Northstar/Harbor or identity switcher, and a logo matching the public site. Create an issue and reload: it must persist.
 2. Sign in as B in a separate browser/profile. Confirm no A projects or shared demo data. Check a third account C similarly. Direct API requests with another account's project ID must return 404, including writes and invites.
-3. As A, create an invitation for B's email in **Members**. Copy/send the link. B must explicitly accept while signed in with that email. B now sees that project; A's other projects remain private. A must reload to see B's membership.
+3. As A, create an invitation for B's email in **Members**. Copy/send the link. B must explicitly accept while signed in with that email. B now sees that project; A's other projects remain private. A should see B's membership automatically within a few seconds.
 4. C cannot accept B's invitation, even with the link. Expired or already-used invitations must not grant C access. A signed-out invitee should be sent to login and retain the invitation in the same browser tab.
-5. B can send messages and propose evidence. A sees them after reloading. Only A can invite people, approve evidence or save memo versions.
+5. B can send messages and propose evidence. A sees them automatically within a few seconds. Only A can invite people, approve evidence or save memo versions.
 6. Add a third project member. Create a private conversation excluding that member. Inspect their project API response: no private conversation, messages or files may appear. Pending excerpts are visible to their participants and the owner reviewing the explicitly submitted excerpt. Approving an excerpt shares that excerpt only. Saving a filtered snapshot must preserve others' private data.
 7. Test simultaneous edits in two browsers. The second stale save must show a conflict and not overwrite the first. Preserve any needed text and reload before reapplying it.
 8. Remove database configuration in a preview deployment: show a setup error, never shared seeded projects or local-storage isolation disguised as secure sharing.
@@ -42,3 +42,12 @@ Automated Node tests mock Supabase responses and cannot verify migration executi
 2. As a non-owner, start a direct chat with another non-owner. Confirm only those two accounts can see it.
 3. Create a named group by selecting project members. Confirm the creator is included and the owner is included only when selected. Check the group member list.
 4. Propose a selected private excerpt as evidence. Confirm the owner can review/approve that excerpt without seeing the raw private chat. Existing chats keep their existing membership.
+
+
+## Automatic conversation updates
+
+1. Open the same project/chat with two accounts. Send messages in both directions; they should arrive without page reload, usually within three seconds plus network time.
+2. Keep an unsent draft with the cursor mid-text while the other account sends. The draft, focus and selection must remain intact. Scroll up to older messages and confirm incoming updates do not force you to the bottom.
+3. Open a modal or edit a memo while another account sends. Updates should wait until the dialog/editor closes. Test text composition with an IME.
+4. Hide the tab; background requests should pause. Return or focus it; check immediately for missed messages. Temporarily disconnect and reconnect; the last visible messages should stay and updates should resume automatically.
+5. Send locally while a background GET is in flight. The older response must not remove your message or advance the revision baseline. Concurrent-save conflicts must still be reported rather than overwriting changes.
