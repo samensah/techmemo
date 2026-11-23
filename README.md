@@ -9,7 +9,7 @@ A technical accounting workspace for investigating accounting issues, collaborat
 - Owners invite people by email and receive a link to share. Invitations expire after seven days, require the invited verified email, and are consumed atomically. Creating a link does **not** send an invitation email automatically.
 - Collaborators can discuss, attach evidence, propose excerpts and start permitted private conversations. Only the owner can approve evidence and create/edit memo versions. Other participants can read shared memos and approved excerpts.
 - Server-side membership checks protect every project read/write. Private conversations and pending private evidence are removed from responses to other participants; approved excerpts are explicitly shared.
-- Changes are saved to Supabase. Use **Refresh** to load another collaborator’s latest changes. Revision checks reject conflicting saves rather than overwriting someone else’s work. A conflict stops autosaving: keep any needed text, reload and reapply it.
+- Changes are saved to Supabase. Reload the page to load another collaborator’s latest changes. Revision checks reject conflicting saves rather than overwriting someone else’s work. A conflict stops autosaving: keep any needed text, reload and reapply it.
 - TechMemo and the account menu stay fixed in the sidebar; only navigation scrolls. The sidebar can collapse.
 
 The old shared Northstar/Harbor organizations, demo identities and seeded accounting issues have been removed. Existing browser demo data is not imported or read. Google and password accounts with the same email are separate identities; they are not automatically linked.

@@ -10,9 +10,9 @@
 
 1. Sign in as A. Confirm an empty workspace, actual account initials/name, no Northstar/Harbor or identity switcher, and a logo matching the public site. Create an issue and reload: it must persist.
 2. Sign in as B in a separate browser/profile. Confirm no A projects or shared demo data. Check a third account C similarly. Direct API requests with another account's project ID must return 404, including writes and invites.
-3. As A, create an invitation for B's email in **Members**. Copy/send the link. B must explicitly accept while signed in with that email. B now sees that project; A's other projects remain private. A must Refresh to see B's membership.
+3. As A, create an invitation for B's email in **Members**. Copy/send the link. B must explicitly accept while signed in with that email. B now sees that project; A's other projects remain private. A must reload to see B's membership.
 4. C cannot accept B's invitation, even with the link. Expired or already-used invitations must not grant C access. A signed-out invitee should be sent to login and retain the invitation in the same browser tab.
-5. B can send messages and propose evidence. A sees them after Refresh. Only A can invite people, approve evidence or save memo versions.
+5. B can send messages and propose evidence. A sees them after reloading. Only A can invite people, approve evidence or save memo versions.
 6. Add a third project member. Create a private conversation excluding that member. Inspect their project API response: no private conversation, messages, files or pending excerpts may appear. Approving an excerpt shares that excerpt only. Saving a filtered snapshot must preserve others' private data.
 7. Test simultaneous edits in two browsers. The second stale save must show a conflict and not overwrite the first. Preserve any needed text and reload before reapplying it.
 8. Remove database configuration in a preview deployment: show a setup error, never shared seeded projects or local-storage isolation disguised as secure sharing.
