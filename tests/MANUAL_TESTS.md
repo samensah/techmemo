@@ -71,3 +71,5 @@ Automated Node tests mock Supabase responses and cannot verify migration executi
 4. Check desktop, collapsed sidebar, mobile chat overlay and a short viewport. Ensure the compose box and tab content remain reachable without outer-page scrolling.
 
 Memo toolbar: scroll a long memo and confirm its title, version/author/date information, and History/Compare/Edit/Export controls stay fixed directly below the project tabs. Only the memo body and comparison content should move. Check narrow screens for wrapped controls.
+
+Conversation toggle: on desktop, hide/show the right pane with the top-bar Conversations button or its header close control. The middle column must expand when hidden. Unsent chat text, focus behavior and memo scroll position must survive toggling. Check mobile overlay behavior, hidden keyboard focus, and persistence of the chosen visibility while changing projects or receiving background updates.

@@ -22,3 +22,6 @@ body:has(.app-shell){overflow:hidden}.app-shell{height:100vh;height:100dvh;min-h
 @media(max-width:1280px){.memo-toolbar-region{padding:18px 22px 0}}
 @media(max-width:800px){.memo-toolbar-region .doc-bar{flex-wrap:wrap}.memo-toolbar-region .doc-tools{flex-wrap:wrap}}
 @media(max-width:670px){.memo-toolbar-region{padding:12px 15px 0}}
+/* Conversation visibility is controlled on every screen size. */
+.app-shell.conversations-hidden{grid-template-columns:var(--sidebar-width) minmax(0,1fr)}.app-shell.conversations-hidden>.right-panel{display:none}.conversations-toggle[aria-expanded="true"]{background:var(--green-soft);border-color:#b6d7c9;color:var(--green-dark)}
+@media(max-width:670px){.app-shell.conversations-hidden{grid-template-columns:56px minmax(0,1fr)}.conversations-toggle>span{display:none}.conversations-toggle{padding:7px}.top-actions{gap:7px}}
